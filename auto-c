@@ -1,0 +1,62 @@
+#!/bin/bash
+
+watchlist=($@)
+executable="temp_program.out"
+valgrind_log="temp_valgrind.log"
+no_leaks="no leaks are possible"
+compilation_rule="cc "${watchlist[@]}" -o "$executable""
+
+do_valgrind()
+{
+	valgrind ./"$executable" &> "$valgrind_log"
+	valgrind_check=$(grep "$no_leaks" "$valgrind_log")
+	if [[ -z "$valgrind_check" ]]; then 
+		clear
+		cat "$valgrind_log"
+	fi
+}
+
+check_modification()
+{
+	file=$1
+	mod_file=$(stat -c %Y "$file")
+	mod_executable=$(stat -c %Y "$executable")
+	if [[ "$mod_file" > "$mod_executable" ]]; then
+		compile
+	fi
+}
+
+cleanup()
+{
+	echo $valgrind_check
+	[ "$executable" ] && rm "$executable" 
+	[ "$valgrind_log" ] && rm "$valgrind_log"
+	exit
+}
+
+check_watchlist()
+{
+	read -t 2 INPUT &&
+		[[ "$INPUT" = "" ]] && cleanup
+	for file in "${watchlist[@]}"; do
+		check_modification $file
+	done
+	check_watchlist
+}
+
+error_handling()
+{
+	touch "$executable"
+	check_watchlist
+}
+
+compile()
+{
+	clear
+	`$compilation_rule`
+	[[ "$?" != 0 ]] && error_handling
+	./"$executable"
+	do_valgrind
+	check_watchlist
+}
+compile
