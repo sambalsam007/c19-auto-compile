@@ -1,6 +1,7 @@
 #!/bin/bash
 
 watchlist=($@)
+[ -z "$watchlist" ] && watchlist=(*.c)
 executable="temp_program.out"
 valgrind_log="temp_valgrind.log"
 no_leaks="no leaks are possible"
@@ -55,8 +56,7 @@ compile()
 	clear
 	`$compilation_rule`
 	[[ "$?" != 0 ]] && error_handling
-	./"$executable"
-	do_valgrind
+	./"$executable" && do_valgrind
 	check_watchlist
 }
 compile
